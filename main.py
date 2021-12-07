@@ -1,6 +1,5 @@
-import time
-
 import requests
+import time
 from binance.client import Client
 
 line_url = 'https://notify-api.line.me/api/notify'
@@ -14,9 +13,10 @@ client = Client(api_key, api_secret)
 rate = 34.00
 mycoin = ['BTCUSDT']
 
+
 # depth = client.get_order_book(symbol='BTCUSDT')
 # print(depth)
-while True:
+def fetch_price():
 	prices = client.get_all_tickers()
 	for p in prices:
 		for c in mycoin:
@@ -25,8 +25,15 @@ while True:
 				pc = float(p['price'])
 				cal = pc * rate
 				msg = 'coin: {} price: {}'.format(sym, pc) \
-					  + '\nin THB: {:,.8f}'.format(cal)
-				
+					  + '\nin THB: {:,.2f}'.format(cal)
+
 				r = requests.post(line_url, headers=headers, data={'message': msg})
 				print(r.text)
+				return pc
+
+
+while True:
+	p1 = fetch_price()
 	time.sleep(5)
+	p2 = fetch_price()
+	print((p2 - p1) / p1)
