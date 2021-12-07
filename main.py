@@ -1,5 +1,6 @@
-import requests
 import time
+
+import requests
 from binance.client import Client
 
 line_url = 'https://notify-api.line.me/api/notify'
@@ -11,29 +12,38 @@ api_secret = 'c87mIXGhNbIyKr1BbkWFZPF1g5jP8FLtjgq27HiPcrvbWqP19lKS2fGvBUoTw7eh'
 
 client = Client(api_key, api_secret)
 rate = 34.00
-mycoin = ['BTCUSDT']
+my_coin = ['BTCUSDT']
 
 
-# depth = client.get_order_book(symbol='BTCUSDT')
-# print(depth)
 def fetch_price():
 	prices = client.get_all_tickers()
 	for p in prices:
-		for c in mycoin:
-			sym = c
-			if p['symbol'] == 'BTCUSDT':
+		for sym in my_coin:
+			if p['symbol'] == sym:
 				pc = float(p['price'])
 				cal = pc * rate
-				msg = 'coin: {} price: {}'.format(sym, pc) \
-					  + '\nin THB: {:,.2f}'.format(cal)
+				
+				return Price(sym, pc, cal)
 
-				r = requests.post(line_url, headers=headers, data={'message': msg})
-				print(r.text)
-				return pc
+
+class Price:
+	def __init__(self, s, p, cp):
+		self.symbol = s
+		self.price = p
+		self.converted_price = cp
+	
+	def notify_line(self):
+		msg = 'coin: {} price: {}'.format(self.symbol, self.price) \
+			  + '\nin THB: {:,.2f}'.format(self.converted_price)
+		
+		r = requests.post(line_url, headers=headers, data={'message': msg})
+		print('request sent: ' + r.text)
 
 
 while True:
 	p1 = fetch_price()
 	time.sleep(5)
 	p2 = fetch_price()
-	print((p2 - p1) / p1)
+	
+	p2.notify_line()
+	print((p2.price - p1.price) / p1.price)
