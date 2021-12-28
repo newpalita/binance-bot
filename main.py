@@ -1,6 +1,6 @@
-import json
-import requests
 import time
+
+import requests
 from binance.client import Client
 
 RSI_HIGH_THRESHOLD = 70
@@ -35,7 +35,7 @@ class Price:
 
 def notify_line(alert, p0, p1):
 	msg = alert + get_coin_info_text(p0, p1)
-
+	
 	r = requests.post(line_api_url, headers=line_api_headers, data={'message': msg})
 	print('request sent: ' + r.text)
 
@@ -64,7 +64,7 @@ def fetch_price():
 				pc = float(p['price'])
 				cal = pc * rate
 				rsi = get_rsi().json()['value']
-
+				
 				return Price(sym, pc, cal, rsi)
 
 
@@ -74,9 +74,9 @@ while True:
 	try:
 		time.sleep(ALERT_UPDATE_INTERVAL_IN_SECS)
 		current_price = fetch_price()
-
+		
 		changes = get_percentage_change(past_price.price, current_price.price)
-
+		
 		if changes > PERCENTAGE_CHANGE_THRESHOLD:
 			notify_line('\n\nCHANGES ABOVE {}% ALERT!\n\n'.format(PERCENTAGE_CHANGE_THRESHOLD), past_price,
 						current_price)
@@ -86,13 +86,13 @@ while True:
 			notify_line('\n\nRSI BELOW {} ALERT!\n\n'.format(RSI_LOW_THRESHOLD), past_price, current_price)
 		else:
 			print('Everything is normal; no alert needed')
-
-		past_price = current_price
-
+		
 		if count >= REGULAR_PRICE_UPDATE_INTERVAL_COUNT:
 			notify_line('\n\nPrice update\n\n', past_price, current_price)
 			count = 0
 		else:
 			count += count
+		
+		past_price = current_price
 	except KeyError:
 		print('TaAPI rate limit reached')
