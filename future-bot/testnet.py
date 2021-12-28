@@ -101,15 +101,19 @@ def sell_market_order(symbol, quantity):
 def check_account_balance():
 	print('Current futures balance')
 	balance = client.get_account()['balances']
+	msg = []
 	for b in balance:
 		if b['asset'] in ['BTC', 'USDT']:
 			print('{}={}'.format(b['asset'], b['free']))
+			msg.append('{}={}'.format(b['asset'], b['free']))
+	return msg
 
 
 qty = 0.01
 strategy_take_profit_price = 0
 strategy_stop_loss_price = 0
 opening_strategy = FuturesTradingStrategy.INACTIVE
+tick_count = 0
 while True:
 	try:
 		current_price = fetch_price()
@@ -166,7 +170,14 @@ while True:
 				print('Holding short...')
 		print('------------------------------')
 		print('Current Strategy: {}'.format(opening_strategy.name))
-		check_account_balance()
+		
+		balance_msg = check_account_balance()
+		if tick_count >= 60:
+			notify_line('ACCOUNT BALANCE UPDATE\n\n' + '\n'.join(balance_msg))
+			tick_count = 0
+		else:
+			tick_count += 1
+			
 		time.sleep(FUTURES_UPDATE_INTERVAL_IN_SECS)
 	except KeyError:
 		print('TaAPI rate limit reached')
