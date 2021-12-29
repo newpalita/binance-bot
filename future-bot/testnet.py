@@ -113,7 +113,7 @@ qty = 0.01
 strategy_take_profit_price = 0
 strategy_stop_loss_price = 0
 opening_strategy = FuturesTradingStrategy.INACTIVE
-tick_count = 0
+should_update_balance = False
 while True:
 	try:
 		current_price = fetch_price()
@@ -125,8 +125,10 @@ while True:
 				opening_strategy = FuturesTradingStrategy.LONG
 				strategy_take_profit_price = current_price.price + (current_price.atr * 1.5)
 				strategy_stop_loss_price = current_price.price - current_price.atr
-				notify_line('ENTER LONG STRATEGY\n\nEnter long strategy of BTC/USDT\nprice = {}\nquantity = {}'.format(
-					current_price.price, qty))
+				notify_line(
+					'\n\nENTER LONG STRATEGY\n\nEnter long strategy of BTC/USDT\nprice = {}\nquantity = {}'.format(
+						current_price.price, qty))
+				should_update_balance = True
 			elif current_price.rsi < RSI_LOW_THRESHOLD:
 				print('RSI below {}, enter short strategy with price={}'.format(RSI_LOW_THRESHOLD, current_price.price))
 				sell_market_order(COIN_SYMBOL, qty)
@@ -134,50 +136,65 @@ while True:
 				strategy_take_profit_price = current_price.price - (current_price.atr * 1.5)
 				strategy_stop_loss_price = current_price.price + current_price.atr
 				notify_line(
-					'ENTER SHORT STRATEGY\n\nEnter short strategy of BTC/USDT\nprice = {}\nquantity = {}'.format(
+					'\n\nENTER SHORT STRATEGY\n\nEnter short strategy of BTC/USDT\nprice = {}\nquantity = {}'.format(
 						current_price.price, qty))
+				should_update_balance = True
 		elif opening_strategy == FuturesTradingStrategy.LONG:
 			if current_price.price >= strategy_take_profit_price:
 				print('Take profit from long strategy with price={}'.format(current_price.price))
 				sell_market_order(COIN_SYMBOL, qty)
 				opening_strategy = FuturesTradingStrategy.INACTIVE
 				notify_line(
-					'TAKE PROFIT\n\nTake profit from long strategy of BTC/USDT\nprice = {}\nquantity = {}'.format(
+					'\n\nTAKE PROFIT\n\nTake profit from long strategy of BTC/USDT\nprice = {}\nquantity = {}'.format(
 						current_price.price, qty))
-			elif current_price.atr <= strategy_stop_loss_price:
+				should_update_balance = True
+			elif current_price.price <= strategy_stop_loss_price:
 				print('Cut loss from long strategy with price={}'.format(current_price.price))
 				sell_market_order(COIN_SYMBOL, qty)
 				opening_strategy = FuturesTradingStrategy.INACTIVE
-				notify_line('CUT LOSS\n\nCut loss from long strategy of BTC/USDT\nprice = {}\nquantity = {}'.format(
+				notify_line('\n\nCUT LOSS\n\nCut loss from long strategy of BTC/USDT\nprice = {}\nquantity = {}'.format(
 					current_price.price, qty))
+				should_update_balance = True
 			else:
 				print('Holding long...')
 		elif opening_strategy == FuturesTradingStrategy.SHORT:
-			if current_price.atr <= strategy_take_profit_price:
+			if current_price.price <= strategy_take_profit_price:
 				print('Take profit from short strategy with price={}'.format(current_price.price))
 				buy_market_order(COIN_SYMBOL, qty)
 				opening_strategy = FuturesTradingStrategy.INACTIVE
 				notify_line(
-					'TAKE PROFIT\n\nTake profit from short strategy of BTC/USDT\nprice = {}\nquantity = {}'.format(
+					'\n\nTAKE PROFIT\n\nTake profit from short strategy of BTC/USDT\nprice = {}\nquantity = {}'.format(
 						current_price.price, qty))
-			elif current_price.atr >= strategy_stop_loss_price:
+				should_update_balance = True
+			elif current_price.price >= strategy_stop_loss_price:
 				print('Cut loss from short strategy with price={}'.format(current_price.price))
 				buy_market_order(COIN_SYMBOL, qty)
 				opening_strategy = FuturesTradingStrategy.INACTIVE
-				notify_line('CUT LOSS\n\nCut loss from short strategy of BTC/USDT\nprice = {}\nquantity = {}'.format(
-					current_price.price, qty))
+				notify_line(
+					'\n\nCUT LOSS\n\nCut loss from short strategy of BTC/USDT\nprice = {}\nquantity = {}'.format(
+						current_price.price, qty))
+				should_update_balance = True
 			else:
 				print('Holding short...')
 		print('------------------------------')
 		print('Current Strategy: {}'.format(opening_strategy.name))
 		
 		balance_msg = check_account_balance()
-		if tick_count >= 60:
-			notify_line('ACCOUNT BALANCE UPDATE\n\n' + '\n'.join(balance_msg))
-			tick_count = 0
-		else:
-			tick_count += 1
-			
+		if should_update_balance:
+			notify_line('\n\nACCOUNT BALANCE UPDATE\n\n' + '\n'.join(balance_msg))
+			should_update_balance = False
+		
 		time.sleep(FUTURES_UPDATE_INTERVAL_IN_SECS)
-	except KeyError:
-		print('TaAPI rate limit reached')
+	except Exception as e:
+		if e.__class__.__name__ == 'KeyError':
+			print('TaAPI rate limit reached.')
+		elif e.__class__.__name__ == 'BinanceAPIException':
+			print('Error when placing order in Binance.')
+			notify_line('\n\nBOT ERROR!!\n\nError when placing order in Binance.\n\n{}'.format(e))
+		elif e.__class__.__name__ in ['ConnectionError', 'MaxRetryError']:
+			print('Error when trying to connect to services.')
+			notify_line('\n\nBOT ERROR!!\n\nError when trying to connect to services.\n\n{}'.format(e))
+		else:
+			print('Unknown error!!')
+			notify_line('\n\nBOT ERROR!!\n\nSomething went wrong with the bot.\n\n{}'.format(e))
+		time.sleep(FUTURES_UPDATE_INTERVAL_IN_SECS)
