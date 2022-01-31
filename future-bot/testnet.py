@@ -109,6 +109,28 @@ def check_account_balance():
 	return msg
 
 
+def calibrate_balance_buy(amount):
+	price = fetch_price()
+	print('------------------------------')
+	print('Calibrate balance by buying with price={} and amount={}'.format(price.price, amount))
+	
+	buy_market_order(COIN_SYMBOL, amount)
+	
+	check_account_balance()
+
+
+def calibrate_balance_sell(amount):
+	price = fetch_price()
+	print('------------------------------')
+	print('Calibrate balance by selling with price={} and amount={}'.format(price.price, amount))
+	
+	sell_market_order(COIN_SYMBOL, amount)
+	
+	check_account_balance()
+
+
+# calibrate_balance_buy(0.006038)
+
 qty = 0.01
 strategy_take_profit_price = 0
 strategy_stop_loss_price = 0
